@@ -1,0 +1,392 @@
+<!DOCTYPE html><html lang="de"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tages-Tracker Master mit Cloud & KI</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1e293b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="KalorienApp">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 0; display: flex; flex-direction: column; align-items: center; }
+    
+    .top-header { position: sticky; top: 0; background: #1e293b; width: 100%; max-width: 480px; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.6); border-radius: 0 0 14px 14px; margin-bottom: 15px; border-bottom: 2px solid #334155; }
+    .top-nav { display: flex; justify-content: space-around; padding: 10px 0 0 0; }
+    .nav-tab { color: #94a3b8; font-weight: bold; cursor: pointer; font-size: 15px; padding: 5px 10px; transition: 0.2s; border-bottom: 2px solid transparent; }
+    .nav-tab.active { color: #38bdf8; border-bottom: 2px solid #38bdf8; }
+    
+    .auth-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 15px; background: #0f172a; border-bottom: 1px solid #334155; font-size: 13px; }
+    .btn-auth { background: #2563eb; color: white; border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: bold; cursor: pointer; }
+    .btn-auth:hover { background: #1d4ed8; }
+    .btn-logout { background: #ef4444; }
+    
+    .page { display: none; width: 100%; max-width: 480px; padding: 0 15px; box-sizing: border-box; }
+    .page.active { display: block; }
+    
+    .card { background: #1e293b; padding: 20px; border-radius: 14px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 20px; width: 100%; box-sizing: border-box;}
+    
+    h2 { margin: 0 0 15px 0; color: #38bdf8; text-align: center; font-size: 22px; }
+    h3 { font-size: 15px; margin: 18px 0 8px 0; color: #94a3b8; border-bottom: 1px solid #334155; padding-bottom: 4px; }
+    .row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    label { font-size: 14px; }
+    input, select { padding: 10px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #fff; font-size: 16px; box-sizing: border-box; } 
+    input[type="number"], input[type="text"], input[type="date"] { width: 130px; text-align: right; }
+    select { width: 100%; margin-bottom: 8px; }
+    .input-row { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; }
+    .input-row input { flex: 1; text-align: left; }
+    .input-row input[type="number"] { max-width: 90px; text-align: right; }
+    
+    .btn { width: 100%; padding: 14px; margin-top: 15px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .btn:hover { background: #1d4ed8; }
+    .btn-add { background: #0284c7; padding: 10px 12px; font-size: 14px; margin: 0; width: auto; border: none; border-radius: 6px; color: white; cursor: pointer; white-space: nowrap; }
+    .btn-add:hover { background: #0369a1; }
+    .btn-recent { background: #8b5cf6; } .btn-recent:hover { background: #7c3aed; }
+    
+    .item-list { background: #0f172a; border-radius: 6px; padding: 8px; margin-top: 6px; font-size: 13px; max-height: 140px; overflow-y: auto; }
+    .list-entry { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dotted #334155; }
+    .btn-del { background: #ef4444; color: white; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px; margin-left: 8px; }
+    
+    .checkbox-row { display: flex; align-items: center; gap: 10px; font-size: 14px; cursor: pointer; margin-top: 8px; }
+    .detail { color: #94a3b8; font-size: 13px; font-weight: normal; margin-top: 4px; }
+    .recent-box { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); padding: 10px; border-radius: 8px; margin-top: 15px; }
+    
+    .live-bilanz-box { margin-bottom: 25px; padding: 15px; border-radius: 10px; background: #0f172a; text-align: center; font-size: 16px; font-weight: bold; border: 2px solid #38bdf8; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .body-result { margin-top: 10px; padding: 10px; background: #0f172a; border-radius: 6px; text-align: center; color: #38bdf8; font-weight: bold; font-size: 18px;}
+    
+    .chart-wrapper { background: #0f172a; border-radius: 8px; padding: 10px; margin-top: 5px; border: 1px solid #334155; }
+    .chart-box { height: 220px; width: 100%; }
+    .filter-group { display: flex; gap: 5px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 5px; }
+    .filter-group::-webkit-scrollbar { height: 4px; }
+    .filter-group::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+    .filter-btn { background: #334155; border: none; color: #cbd5e1; padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; white-space: nowrap; font-weight: bold;}
+    .filter-btn.active { background: #38bdf8; color: #0f172a; }
+
+    .search-input-wrapper { display: flex; gap: 6px; margin-bottom: 8px; }
+    .search-input-wrapper input { flex: 1; text-align: left; }
+    
+    /* KI BEREICH STYLES */
+    .ai-box { background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(56, 189, 248, 0.15)); border: 1px solid rgba(139, 92, 246, 0.4); padding: 15px; border-radius: 10px; margin-bottom: 20px; text-align: center;}
+    .ai-box h3 { color: #c4b5fd; margin-top: 0; border-bottom: none; font-size: 16px; margin-bottom: 12px;}
+    .ai-buttons { display: flex; gap: 10px; }
+    .btn-ai-voice { flex: 1; background: #8b5cf6; color: white; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-ai-photo { flex: 1; background: #38bdf8; color: #0f172a; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-ai-voice.listening { background: #ef4444; animation: pulse 1.5s infinite; }
+    
+    /* LADE-OVERLAY */
+    #loading-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 2000; justify-content: center; align-items: center; flex-direction: column; color: #38bdf8; font-size: 18px; font-weight: bold; }
+    .spinner { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #38bdf8; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+    
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style></head><body>
+
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <span id="loading-text">Gemini analysiert Mahlzeit...</span>
+</div>
+
+<div class="top-header">
+  <div class="auth-bar">
+    <span id="auth_user_status" style="color: #94a3b8;">Nicht angemeldet</span>
+    <button id="auth_action_btn" class="btn-auth" onclick="toggleGoogleLogin()">Google Anmelden</button>
+  </div>
+  <div class="top-nav">
+    <div class="nav-tab active" onclick="switchTab('tracker', this)">📝 Tracker</div>
+    <div class="nav-tab" onclick="switchTab('body', this)">⚖️ Körper</div>
+    <div class="nav-tab" onclick="switchTab('dashboard', this)">📊 Dashboard</div>
+  </div>
+</div>
+
+<div id="page-tracker" class="page active">
+  <div class="card">
+    
+    <!-- REPARATUR BUTTON (TEMPORÄR) -->
+    <button class="btn" style="background: #ef4444; margin-bottom: 20px; font-size: 14px;" onclick="forceRepairDB()">🚨 Cloud-Datenbank Reparieren (Klicken!)</button>
+
+    <h2>Tages-Tracker Master</h2>
+
+    <div class="live-bilanz-box">
+      <div id="status_text" style="font-size: 18px; margin-bottom: 10px;">Defizit: -- kcal</div>
+      <div style="padding: 12px; background: #1e293b; border-radius: 8px; font-size: 15px; border: 1px solid #475569; text-align: left;">
+        <div style="color: #cbd5e1; margin-bottom: 8px;">Noch frei für 500er Defizit: <b id="frei_defizit" style="color: #4ade80; float: right;">-- kcal</b></div>
+        <div style="color: #cbd5e1;">Noch frei bis Erhalt (±0): <b id="frei_erhalt" style="color: #fcd34d; float: right;">-- kcal</b></div>
+      </div>
+      <div class="detail" style="margin-top:10px;">Aufnahme: <b id="live_in" style="color:white;">0</b> kcal &nbsp;|&nbsp; Verbrauch: <b id="live_out" style="color:white;">1800</b> kcal</div>
+    </div>
+
+    <!-- KI SMART TRACKER BEREICH -->
+    <div class="ai-box">
+      <h3>✨ Smart Tracker (Gemini KI)</h3>
+      <div class="ai-buttons">
+        <button class="btn-ai-voice" id="btn_ai_voice" onclick="startAIVoice()">🎙️ Sprache</button>
+        <button class="btn-ai-photo" onclick="document.getElementById('ai_camera_input').click()">📸 Foto</button>
+      </div>
+      <div style="font-size:12px; color:#94a3b8; margin-top:10px;">Fotografiere deinen Teller oder diktiere die Mahlzeit (z.B. "200g Rinderfilet mit Brokkoli"). Die KI nutzt deine Datenbank.</div>
+      <input type="file" accept="image/*" capture="environment" id="ai_camera_input" style="display:none" onchange="handleAIPhoto(event)">
+    </div>
+
+    <h3>1. Basis & Alltagsschritte</h3>
+    <div class="row"><label>Grundumsatz / Fixum:</label><input type="number" id="basis" value="1800" readonly style="opacity: 0.7;"></div>
+    <div class="row"><label>Gesamtschritte (ganzer Tag):</label><input type="number" id="steps_total" value="15000" oninput="triggerUpdate()"></div>
+    <label class="checkbox-row"><input type="checkbox" id="stehbonus" style="width: 18px; height: 18px;" onchange="triggerUpdate()"> Stehbonus (+125 kcal)</label>
+    <div class="row" style="margin-top: 10px;"><label>Aktivitätsbonus:</label><input type="number" id="aktivitaetsbonus" placeholder="0" style="max-width: 70px;" oninput="triggerUpdate()"></div>
+
+    <h3>2. Sporteinheiten</h3>
+    <select id="sport_select" onchange="toggleCustomSport()">
+      <option value="Joggen">Joggen</option><option value="Joggen Laufband">Joggen Laufband</option><option value="Laufband Incline Lauf">Laufband Incline Lauf</option>
+      <option value="Nordic Walking">Nordic Walking</option><option value="Rudergerät">Rudergerät</option><option value="Ergometer">Ergometer</option>
+      <option value="Leichtes Krafttraining">Leichtes Krafttraining</option><option value="CUSTOM">-- Frei wählbar / Eigenes --</option>
+    </select>
+    <div id="custom_sport_wrap" style="display: none; margin-bottom: 8px;"><input type="text" id="custom_sport_name" placeholder="Name der Sportart" style="width: 100%; text-align: left;"></div>
+    <div class="input-row"><input type="number" id="sport_kcal" placeholder="kcal" style="flex: 1;"><input type="number" id="sport_steps" placeholder="Schritte" style="flex: 1;"><button class="btn-add" onclick="addSport()">+ Einheit</button></div>
+    <div class="item-list" id="sport_list_box"><span style="color:#64748b;">Noch keine Sporteinheit erfasst</span></div>
+
+    <div class="recent-box">
+      <h3 style="margin-top: 0; color: #c4b5fd; border-bottom-color: rgba(139, 92, 246, 0.3);">3. ⏱️ Zuletzt verwendet</h3>
+      <select id="recent_select"></select>
+      <div class="input-row"><input type="number" id="recent_amount" placeholder="Menge (g/Stk)" value="100" style="flex: 1;"><button class="btn-add btn-recent" onclick="addRecentFood()">+ Hinzufügen</button></div>
+    </div>
+
+    <h3>4. Mahlzeiten (Datenbank pro 100g)</h3>
+    <div class="search-input-wrapper"><input type="text" id="food_100_search" placeholder="🔍 Lebensmittel suchen..." oninput="filterFoodList('100')"></div>
+    <select id="food_100_select" size="5" style="width:100%; height: 120px;"></select>
+    <div class="input-row"><input type="number" id="food_100_amount" placeholder="Gramm (g)" value="100" style="flex: 1;"><button class="btn-add" onclick="addFood100()">+ Gramm</button></div>
+
+    <h3>5. Mahlzeiten (Feste Portionen / Stück)</h3>
+    <div class="search-input-wrapper"><input type="text" id="food_piece_search" placeholder="🔍 Portion / Stück suchen..." oninput="filterFoodList('piece')"></div>
+    <select id="food_piece_select" size="5" style="width:100%; height: 120px;"></select>
+    <div class="input-row"><input type="number" id="food_piece_amount" placeholder="Anzahl" value="1" style="flex: 1;"><button class="btn-add" style="background: #059669;" onclick="addFoodPiece()">+ Portion</button></div>
+
+    <h3 id="custom_food_header">6. Freies Lebensmittel (Speichert in Cloud-Datenbank)</h3>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <input type="text" id="custom_food_name" placeholder="Name des Lebensmittels (z.B. Protein-Pudding)" style="width: 100%; text-align: left;">
+      <div class="input-row"><input type="number" id="custom_food_kcal100" placeholder="kcal pro 100g" style="flex: 1;"><input type="number" id="custom_food_grams" placeholder="Gramm (g)" value="100" style="flex: 1;"><button class="btn-add" onclick="addCustomFood()">+ Manuell & Speichern</button></div>
+    </div>
+
+    <h3 style="margin-top:20px;">Heutige Mahlzeiten</h3>
+    <div class="item-list" id="food_list_box" style="max-height: 200px;"><span style="color:#64748b;">Noch keine Lebensmittel hinzugefügt</span></div>
+    <button class="btn" style="background: #10b981; margin-top: 25px;" onclick="saveDay()">Tagesabschluss manuell speichern</button>
+  </div>
+</div>
+
+<!-- ================= REITER 2: KÖRPER ================= -->
+<div id="page-body" class="page">
+  <div class="card">
+    <h2>Körper & Gewicht</h2>
+    <div class="row" style="margin-top:20px;"><label>Datum der Messung:</label><input type="date" id="body_date"></div>
+    <div class="row"><label>Körpergröße (cm):</label><input type="number" id="body_height" placeholder="180" oninput="calculateBMI()"></div>
+    <div class="row"><label>Aktuelles Gewicht (kg):</label><input type="number" id="body_weight" step="0.1" placeholder="85.5" oninput="calculateBMI()"></div>
+    <div class="row"><label>Körperfettanteil (%):</label><input type="number" id="body_fat" step="0.1" placeholder="18.5"></div>
+    <div class="body-result">BMI: <span id="bmi_result">--</span></div>
+    <button class="btn" style="background: #10b981;" onclick="saveBodyData()">Messung speichern</button>
+    <h3 style="margin-top:25px;">Bisherige Messungen</h3>
+    <div class="item-list" id="body_history_box" style="max-height: 400px;"></div>
+  </div>
+</div>
+
+<!-- ================= REITER 3: DASHBOARD ================= -->
+<div id="page-dashboard" class="page">
+  <div class="card">
+    <h2>Dashboard & Archiv</h2>
+    <h3>Kalorien-Bilanz & Tagesschritte</h3>
+    <div class="filter-group" id="filter-cal">
+      <button class="filter-btn active" onclick="updateChartCal(7, this)">7 Tage</button>
+      <button class="filter-btn" onclick="updateChartCal(30, this)">30 Tage</button><button class="filter-btn" onclick="updateChartCal(90, this)">3 Monate</button>
+    </div>
+    <div class="chart-wrapper"><div class="chart-box"><canvas id="chart-calories"></canvas></div></div>
+
+    <h3 style="margin-top:25px;">Sport & Aktivität (Details)</h3>
+    <div class="filter-group" id="filter-act">
+      <button class="filter-btn active" onclick="updateChartAct(7, this)">7 Tage</button>
+      <button class="filter-btn" onclick="updateChartAct(30, this)">30 Tage</button><button class="filter-btn" onclick="updateChartAct(90, this)">3 Monate</button>
+    </div>
+    <div class="chart-wrapper"><div class="chart-box"><canvas id="chart-activity"></canvas></div></div>
+
+    <h3 style="margin-top:25px;">Gewichtsverlauf (Trend)</h3>
+    <div class="filter-group" id="filter-weight">
+      <button class="filter-btn" onclick="updateChartWeight(30, this)">30 Tage</button>
+      <button class="filter-btn active" onclick="updateChartWeight(90, this)">3 Monate</button><button class="filter-btn" onclick="updateChartWeight(365, this)">1 Jahr</button>
+    </div>
+    <div class="chart-wrapper"><div class="chart-box"><canvas id="chart-weight"></canvas></div></div>
+    <h3 style="margin-top:35px;">Archiv (Vergangene Tage)</h3>
+    <div class="item-list" id="history_box" style="max-height: 250px;"></div>
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button class="btn" style="background: #f59e0b; margin-top: 0; flex: 2;" onclick="exportCSV()">CSV Exportieren</button>
+      <button class="btn" style="background: #ef4444; margin-top: 0; flex: 1;" onclick="clearHistory()">Archiv Löschen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= FIREBASE LOGIK ================= -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCmvu-zonhDbpnkgfvYyFaD-gBcuJ3Oygk",
+    authDomain: "kalorientracker-cc0c2.firebaseapp.com",
+    projectId: "kalorientracker-cc0c2",
+    storageBucket: "kalorientracker-cc0c2.firebasestorage.app",
+    messagingSenderId: "788096825997",
+    appId: "1:788096825997:web:c624792d5a0f332bc080c4"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const googleProvider = new GoogleAuthProvider();
+
+  let currentUser = null;
+
+  window.toggleGoogleLogin = function() {
+    if (!currentUser) { signInWithPopup(auth, googleProvider).catch((e) => alert("Login fehlgeschlagen: " + e.message)); } 
+    else { signOut(auth); }
+  };
+
+  onAuthStateChanged(auth, async (user) => {
+    currentUser = user;
+    const statusEl = document.getElementById('auth_user_status');
+    const btnEl = document.getElementById('auth_action_btn');
+
+    if (user) {
+      statusEl.innerText = user.email; btnEl.innerText = "Abmelden"; btnEl.className = "btn-auth btn-logout";
+      await loadGlobalFoodDB(); 
+      await loadDataFromCloud();
+    } else {
+      statusEl.innerText = "Nicht angemeldet"; btnEl.innerText = "Google Anmelden"; btnEl.className = "btn-auth";
+      loadGlobalFoodDBFallback(); loadLocalFallback();
+    }
+    renderHistory(); renderRecents(); renderBodyHistory(); renderFoodList(); renderSportList(); triggerUpdate();
+  });
+
+  async function loadGlobalFoodDB() {
+    try {
+      const dbRef = doc(db, "users", currentUser.uid, "databases", "food");
+      const docSnap = await getDoc(dbRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        window.rawFood100Data = data.db100 || window.initialDb100;
+        window.rawFoodPieceData = data.dbPiece || window.initialDbPiece;
+      } else {
+        await setDoc(dbRef, { db100: window.initialDb100, dbPiece: window.initialDbPiece });
+        window.rawFood100Data = window.initialDb100; window.rawFoodPieceData = window.initialDbPiece;
+      }
+      populateSelect('100', window.rawFood100Data); populateSelect('piece', window.rawFoodPieceData);
+    } catch(e) { loadGlobalFoodDBFallback(); }
+  }
+
+  function loadGlobalFoodDBFallback() {
+    const localDB = JSON.parse(localStorage.getItem('kalorienFoodDB'));
+    if(localDB) { window.rawFood100Data = localDB.db100; window.rawFoodPieceData = localDB.dbPiece; } 
+    else {
+      window.rawFood100Data = window.initialDb100; window.rawFoodPieceData = window.initialDbPiece;
+      localStorage.setItem('kalorienFoodDB', JSON.stringify({db100: window.initialDb100, dbPiece: window.initialDbPiece}));
+    }
+    populateSelect('100', window.rawFood100Data); populateSelect('piece', window.rawFoodPieceData);
+  }
+
+  window.cloudSyncFoodDB = async function() {
+    if(!currentUser) {
+      localStorage.setItem('kalorienFoodDB', JSON.stringify({db100: window.rawFood100Data, dbPiece: window.rawFoodPieceData}));
+      return;
+    }
+    try {
+      const dbRef = doc(db, "users", currentUser.uid, "databases", "food");
+      await setDoc(dbRef, { db100: window.rawFood100Data, dbPiece: window.rawFoodPieceData }, {merge: true});
+    } catch(e) { console.error("Cloud Sync Fehler:", e); }
+  }
+
+  async function saveDataToCloud() {
+    if (!currentUser) {
+      localStorage.setItem('kalorienCloudState', JSON.stringify({
+        foodEntries: window.foodEntries, sportEntries: window.sportEntries,
+        steps_total: document.getElementById('steps_total').value, stehbonus: document.getElementById('stehbonus').checked, aktivitaetsbonus: document.getElementById('aktivitaetsbonus').value,
+        dailyHistory: window.dailyHistory, bodyHistory: window.bodyHistory
+      }));
+      return;
+    }
+    try {
+      await setDoc(doc(db, "users", currentUser.uid), {
+        date: new Date().toLocaleDateString('de-DE'), foodEntries: window.foodEntries, sportEntries: window.sportEntries,
+        steps_total: document.getElementById('steps_total').value, stehbonus: document.getElementById('stehbonus').checked, aktivitaetsbonus: document.getElementById('aktivitaetsbonus').value, 
+        dailyHistory: window.dailyHistory, bodyHistory: window.bodyHistory, lastUpdated: new Date()
+      }, { merge: true });
+    } catch (e) {}
+  }
+
+  async function loadDataFromCloud() {
+    try {
+      const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        window.foodEntries = data.foodEntries || []; window.sportEntries = data.sportEntries || []; window.dailyHistory = data.dailyHistory || []; window.bodyHistory = data.bodyHistory || [];
+        if(data.steps_total) document.getElementById('steps_total').value = data.steps_total;
+        if(data.stehbonus !== undefined) document.getElementById('stehbonus').checked = data.stehbonus;
+        if(data.aktivitaetsbonus) document.getElementById('aktivitaetsbonus').value = data.aktivitaetsbonus;
+      }
+    } catch (e) { loadLocalFallback(); }
+  }
+
+  function loadLocalFallback() {
+    const s = JSON.parse(localStorage.getItem('kalorienCloudState'));
+    if (s) {
+      window.foodEntries = s.foodEntries || []; window.sportEntries = s.sportEntries || []; window.dailyHistory = s.dailyHistory || []; window.bodyHistory = s.bodyHistory || [];
+      if(s.steps_total) document.getElementById('steps_total').value = s.steps_total;
+      if(s.stehbonus !== undefined) document.getElementById('stehbonus').checked = s.stehbonus;
+      if(s.aktivitaetsbonus) document.getElementById('aktivitaetsbonus').value = s.aktivitaetsbonus;
+    }
+  }
+  window.cloudSyncTrigger = saveDataToCloud;
+</script>
+
+<script>
+// ================= GEMINI KI LOGIK (ETAPPE 2 & 3) =================
+const GEMINI_API_KEY = "AQ.Ab8RN6LupRaRcDf34MghC2YeHzWz_zqJ5GwfoSvbgOUwMo-WuA";
+
+function showLoading(show) { document.getElementById('loading-overlay').style.display = show ? 'flex' : 'none'; }
+
+async function processWithGemini(base64Image, voiceText) {
+  showLoading(true);
+  try {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    const db100Names = window.rawFood100Data.map(i => i.name).join(', ');
+    const dbPieceNames = window.rawFoodPieceData.map(i => i.name).join(', ');
+
+    const prompt = `Du bist ein Kalorien-Tracker-Assistent. 
+Regeln:
+1. Analysiere das Bild ODER den Text. Finde das/die Lebensmittel und die Menge. 
+WICHTIG: Wenn auf einem Foto eine Verpackung, ein Etikett oder ein Hersteller zu erkennen ist, integriere den Markennamen zwingend in den Produktnamen (z.B. "Skyr (Arla)" oder "Low-Carb Brot (Dr. Almond)").
+2. Prüfe VORRANGIG, ob das Lebensmittel ähnlich in der Datenbank existiert.
+   Datenbank 100g: ${db100Names.substring(0, 500)}...
+   Datenbank Stück: ${dbPieceNames.substring(0, 500)}...
+3. Wenn es existiert, gib "isNew": false und trage KEINE baseKcal ein (setze baseKcal auf 0).
+4. Wenn es NICHT existiert (neues Lebensmittel), schätze die realistischen kcal pro 100g (oder pro Portion) und setze "isNew": true, sowie die geschätzten "baseKcal".
+5. Berechne immer die "cal" (Gesamtkalorien für die erkannte Menge).
+
+Antworte AUSSCHLIESSLICH im folgenden JSON-Format (Ohne Markdown-Tags):
+[
+  {
+    "name": "Name des Lebensmittels (Hersteller)",
+    "menge": "z.B. 200g oder 1 Portion",
+    "cal": 250,
+    "isNew": true/false,
+    "baseKcal": 125,
+    "type": "100g" 
+  }
+]`;
+
+    let parts = [{ text: prompt }];
+    if (voiceText) { parts.push({ text: "Nutzer sagt: " + voiceText }); }
+    if (base64Image) {
+      const base64Data = base64Image.split(',')[1];
+      parts.push({ inline_data: { mime_type: "image/jpeg", data: base64Data } });
+    }
+
+    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: parts }] }) });
+    const data = await response.json();
+    let textResult = data.candidates[0].content.parts[0].text;
+    textResult = textResult.replace(/```json/g, '').replace(/
